@@ -1,0 +1,89 @@
+/* ══ MODAL ══ */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.open {
+  display: flex;
+  animation: fadeIn 0.25s ease;
+}
+
+.modal {
+  background: rgba(8, 3, 3, 0.97);
+  border: 1px solid rgba(150, 0, 0, 0.4);
+  padding: 40px;
+  max-width: 440px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 0 60px rgba(150, 0, 0, 0.2), 0 40px 80px rgba(0, 0, 0, .8);
+  position: relative;
+}
+
+.modal::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--red), transparent);
+}
+
+.modal h3 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  margin-bottom: 10px;
+  letter-spacing: 0.12em;
+  color: var(--white);
+}
+
+.modal p {
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1.7;
+  margin-bottom: 28px;
+}
+
+.modal-btns {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.modal-cancel {
+  background: rgba(30, 15, 15, 0.8);
+  border: 1px solid rgba(100, 40, 40, 0.3);
+  color: var(--text);
+  padding: 12px 24px;
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: all 0.2s;
+}
+
+.modal-cancel:hover { border-color: var(--text); }
+
+.modal-confirm {
+  background: var(--red);
+  color: #fff;
+  border: none;
+  padding: 12px 28px;
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: all 0.2s;
+}
+
+.modal-confirm:hover {
+  box-shadow: 0 0 20px var(--red-glow);
+  transform: translateY(-1px);
+}
