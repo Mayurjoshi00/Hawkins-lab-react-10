@@ -61,7 +61,7 @@ export default function QuizScreen({ teamData, onSubmit }) {
           totalSeconds: totalSecs,
         }),
       }).catch(() => {});
-    }, 15000);
+    }, 5000);
     return () => clearInterval(heartbeatRef.current);
   }, [serverMode]); // eslint-disable-line
 

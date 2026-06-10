@@ -89,9 +89,26 @@ export default function AdminPanel() {
   }
 
   function handleWSMessage(msg, token) {
-    if (msg.type === 'SNAPSHOT' || msg.type === 'TEAM_JOINED' || msg.type === 'TEAM_SUBMITTED') {
-      renderDashboard(token);
+    if (msg.type === 'SNAPSHOT') {
+      // Full snapshot on connect — set teams directly, no HTTP round-trip
+      setTeams(msg.teams || []);
+    } else if (msg.type === 'TEAM_JOINED') {
+      // New team logged in — add or update in place
+      setTeams(prev => {
+        const exists = prev.findIndex(t => t.id === msg.team.id);
+        if (exists >= 0) {
+          const next = [...prev]; next[exists] = msg.team; return next;
+        }
+        return [...prev, msg.team];
+      });
+    } else if (msg.type === 'TEAM_SUBMITTED') {
+      // Team submitted — update their entry instantly
+      setTeams(prev => prev.map(t => t.id === msg.team.id ? msg.team : t));
     } else if (msg.type === 'TAB_SWITCH') {
+      // Tab switch — update team's tabSwitchCount inline + show toast
+      setTeams(prev => prev.map(t =>
+        t.id === msg.teamId ? { ...t, tabSwitchCount: msg.count } : t
+      ));
       setTabAlerts(prev => {
         const existing = prev.findIndex(a => a.teamId === msg.teamId);
         if (existing >= 0) {
@@ -102,10 +119,9 @@ export default function AdminPanel() {
         return [{ teamId: msg.teamId, teamName: msg.teamName, count: msg.count, timestamp: msg.timestamp }, ...prev];
       });
       showAlertToast(msg.teamName, msg.count, msg.timestamp);
-      renderDashboard(token);
     } else if (msg.type === 'DATA_CLEARED') {
+      setTeams([]);
       setTabAlerts([]);
-      renderDashboard(token);
     }
   }
 
