@@ -11,15 +11,17 @@ export default function AdminPanel() {
   const [adminToken,  setAdminToken]  = useState(null);
   const [teams,       setTeams]       = useState([]);
   const [credentials, setCredentials] = useState(LOCAL_TEAM_CREDENTIALS);
+  const [serverOnline, setServerOnline] = useState(null);
+  const [toasts,       setToasts]       = useState([]);
   const [tabAlerts,   setTabAlerts]   = useState([]);  // { teamId, teamName, count, timestamp }
   const [wsStatus,    setWsStatus]    = useState('LIVE');
   const [showClear,   setShowClear]   = useState(false);
   const [spinning,    setSpinning]    = useState(false);
-  const [serverOnline, setServerOnline] = useState(null); // null=unknown, true=online, false=offline
 
   const wsRef        = useRef(null);
   const toastRef     = useRef(null);
   const alertTimers  = useRef({});
+  const toastTimers  = useRef({});
   const refreshIntervalRef = useRef(null);
   const adminTokenRef = useRef(null);  // always up-to-date token for WS callbacks
 
@@ -99,7 +101,7 @@ export default function AdminPanel() {
         }
         return [{ teamId: msg.teamId, teamName: msg.teamName, count: msg.count, timestamp: msg.timestamp }, ...prev];
       });
-      showAlertToast(msg.teamName, msg.count);
+      showAlertToast(msg.teamName, msg.count, msg.timestamp);
       renderDashboard(token);
     } else if (msg.type === 'DATA_CLEARED') {
       setTabAlerts([]);
@@ -107,15 +109,20 @@ export default function AdminPanel() {
     }
   }
 
-  // ── Alert toast ──
-  function showAlertToast(teamName, count) {
-    const toast = document.getElementById('alert-toast');
-    if (!toast) return;
-    document.getElementById('alert-toast-body').textContent =
-      `${teamName} switched tabs — total: ${count} time${count !== 1 ? 's' : ''}`;
-    toast.classList.add('show');
-    clearTimeout(toastRef.current);
-    toastRef.current = setTimeout(() => toast.classList.remove('show'), 5000);
+  // ── Stacked alert toasts (8s auto-dismiss) ──
+  function showAlertToast(teamName, count, timestamp) {
+    const id = 'toast_' + Date.now() + '_' + Math.random();
+    const time = new Date(timestamp).toLocaleTimeString('en-IN', {
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true,
+    });
+    setToasts(prev => [...prev, { id, teamName, count, time }]);
+    toastTimers.current[id] = setTimeout(() => dismissToast(id), 8000);
+  }
+
+  function dismissToast(id) {
+    clearTimeout(toastTimers.current[id]);
+    delete toastTimers.current[id];
+    setToasts(prev => prev.filter(t => t.id !== id));
   }
 
   // ── Main dashboard fetch ──
@@ -125,7 +132,6 @@ export default function AdminPanel() {
         headers: { 'x-admin-token': token || adminToken },
       });
       if (!res.ok) {
-        // Server unreachable or auth error — keep local credentials visible
         setServerOnline(false);
         setCredentials(LOCAL_TEAM_CREDENTIALS);
         return;
@@ -133,10 +139,8 @@ export default function AdminPanel() {
       const data = await res.json();
       setServerOnline(true);
       setTeams(data.teams || []);
-      // Use server credentials if available, otherwise fall back to local
-      setCredentials(data.credentials?.length ? data.credentials : LOCAL_TEAM_CREDENTIALS);
+      setCredentials(data.credentials && data.credentials.length ? data.credentials : LOCAL_TEAM_CREDENTIALS);
     } catch {
-      // Network error — keep local credentials visible
       setServerOnline(false);
       setCredentials(LOCAL_TEAM_CREDENTIALS);
     }
@@ -240,10 +244,23 @@ export default function AdminPanel() {
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="admin-dash screen">
-      {/* ── Alert toast for real-time tab switch events ── */}
-      <div className="alert-toast" id="alert-toast">
-        <div className="alert-toast-title">⚠ TAB SWITCH DETECTED</div>
-        <div className="alert-toast-body" id="alert-toast-body"></div>
+      {/* ── Stacked tab-switch toasts ── */}
+      <div className="toast-stack">
+        {toasts.map(t => (
+          <div className="tab-toast" key={t.id}>
+            <div className="tab-toast-header">
+              <span className="tab-toast-icon">⚠</span>
+              <span className="tab-toast-title">TAB SWITCH DETECTED</span>
+              <button className="tab-toast-close" onClick={() => dismissToast(t.id)}>&#x2715;</button>
+            </div>
+            <div className="tab-toast-team">{t.teamName}</div>
+            <div className="tab-toast-meta">
+              <span>🕒 {t.time}</span>
+              <span>&middot;</span>
+              <span>Switch #{t.count}</span>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* ── Dashboard Header ── */}
@@ -321,8 +338,8 @@ export default function AdminPanel() {
           🔑 TEAM CREDENTIALS
           {credentials.length > 0 && <span>({credentials.length} registered)</span>}
           {serverOnline === false && (
-            <span style={{ fontSize:'10px', color:'var(--amber)', fontStyle:'italic', letterSpacing:'.05em' }}>
-              ⚡ backend offline — showing local credentials
+            <span style={{ fontSize:'10px', color:'var(--amber)', fontStyle:'italic' }}>
+              &#9889; backend offline — showing local credentials
             </span>
           )}
         </div>
