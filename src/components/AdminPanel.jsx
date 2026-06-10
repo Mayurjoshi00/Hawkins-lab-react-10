@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import LOCAL_TEAM_CREDENTIALS from '../data/teams';
 import './AdminPanel.css';
 
 const ADMIN_PASSWORD = 'chmod777';
@@ -9,11 +10,12 @@ export default function AdminPanel() {
   const [passErr,     setPassErr]     = useState(false);
   const [adminToken,  setAdminToken]  = useState(null);
   const [teams,       setTeams]       = useState([]);
-  const [credentials, setCredentials] = useState([]);
+  const [credentials, setCredentials] = useState(LOCAL_TEAM_CREDENTIALS);
   const [tabAlerts,   setTabAlerts]   = useState([]);  // { teamId, teamName, count, timestamp }
   const [wsStatus,    setWsStatus]    = useState('LIVE');
   const [showClear,   setShowClear]   = useState(false);
   const [spinning,    setSpinning]    = useState(false);
+  const [serverOnline, setServerOnline] = useState(null); // null=unknown, true=online, false=offline
 
   const wsRef        = useRef(null);
   const toastRef     = useRef(null);
@@ -122,11 +124,22 @@ export default function AdminPanel() {
       const res = await fetch('/api/admin/teams', {
         headers: { 'x-admin-token': token || adminToken },
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        // Server unreachable or auth error — keep local credentials visible
+        setServerOnline(false);
+        setCredentials(LOCAL_TEAM_CREDENTIALS);
+        return;
+      }
       const data = await res.json();
+      setServerOnline(true);
       setTeams(data.teams || []);
-      setCredentials(data.credentials || []);
-    } catch {}
+      // Use server credentials if available, otherwise fall back to local
+      setCredentials(data.credentials?.length ? data.credentials : LOCAL_TEAM_CREDENTIALS);
+    } catch {
+      // Network error — keep local credentials visible
+      setServerOnline(false);
+      setCredentials(LOCAL_TEAM_CREDENTIALS);
+    }
   }
 
   async function refreshDash() {
@@ -307,6 +320,11 @@ export default function AdminPanel() {
         <div className="section-title">
           🔑 TEAM CREDENTIALS
           {credentials.length > 0 && <span>({credentials.length} registered)</span>}
+          {serverOnline === false && (
+            <span style={{ fontSize:'10px', color:'var(--amber)', fontStyle:'italic', letterSpacing:'.05em' }}>
+              ⚡ backend offline — showing local credentials
+            </span>
+          )}
         </div>
         <div className="creds-grid">
           {credentials.map(c => {

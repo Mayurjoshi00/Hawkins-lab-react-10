@@ -32,7 +32,13 @@ export default function LoginScreen({ onLogin }) {
         body:    JSON.stringify({ teamId: id, pass, members }),
       }, 5000);
 
-      serverReachable = true; // Server replied (even with an error code)
+      // 502 = proxy couldn't reach backend → treat as unreachable, use offline mode
+      if (res.status === 502 || res.status === 503 || res.status === 504) {
+        serverReachable = false;
+        throw new Error('Backend not reachable');
+      }
+
+      serverReachable = true; // Server replied with a real response (2xx or 4xx)
 
       if (res.ok) {
         const data = await res.json();
