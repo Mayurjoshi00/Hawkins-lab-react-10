@@ -1,0 +1,188 @@
+/* ══ TEAM LOGIN ══ */
+.login-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 60px 20px 40px;
+  text-align: center;
+}
+
+.login-wrap {
+  max-width: 460px;
+  width: 100%;
+}
+
+.login-eyebrow {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 20px;
+}
+
+.login-title-main {
+  font-size: clamp(36px, 7vw, 64px);
+  margin-bottom: 6px;
+  line-height: 1;
+}
+
+.login-subtitle {
+  font-family: var(--font-serif);
+  font-size: 14px;
+  color: var(--text-dim);
+  font-style: italic;
+  margin-bottom: 40px;
+  letter-spacing: 0.05em;
+}
+
+.reg-card {
+  background: rgba(10, 5, 5, 0.9);
+  border: 1px solid rgba(150, 0, 0, 0.3);
+  border-radius: 4px;
+  padding: 44px 40px;
+  width: 100%;
+  box-shadow:
+    0 0 0 1px rgba(100, 0, 0, 0.2),
+    0 32px 80px rgba(0, 0, 0, .8),
+    inset 0 0 60px rgba(80, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.reg-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--red), var(--amber), var(--red), transparent);
+  animation: scanline 3s linear infinite;
+}
+
+@keyframes scanline {
+  0%   { opacity: 0.5; }
+  50%  { opacity: 1; }
+  100% { opacity: 0.5; }
+}
+
+.input-group {
+  text-align: left;
+  margin-bottom: 20px;
+}
+
+.input-group label {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 8px;
+}
+
+.optional-tag {
+  color: var(--text-dim);
+  font-size: 9px;
+}
+
+.input-group input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(150, 50, 50, 0.3);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  padding: 13px 16px;
+  border-radius: 2px;
+  outline: none;
+  transition: all 0.25s;
+  letter-spacing: 0.05em;
+}
+
+.input-group input:focus {
+  border-color: var(--red);
+  box-shadow: 0 0 0 2px var(--red-dim), 0 0 20px var(--red-dim);
+}
+
+.input-group input.error {
+  border-color: #ff4444;
+  box-shadow: 0 0 0 2px rgba(255, 68, 68, 0.2);
+}
+
+.input-err {
+  font-size: 12px;
+  color: #ff6060;
+  margin-bottom: 14px;
+  display: none;
+  font-style: italic;
+  text-align: left;
+}
+
+.input-err.show { display: block; }
+
+.start-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: var(--red);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 15px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 16px;
+  border-radius: 2px;
+  border: none;
+  cursor: pointer;
+  margin-top: 8px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s;
+  box-shadow: 0 0 20px var(--red-dim);
+}
+
+.start-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent);
+}
+
+.start-btn:hover {
+  background: #dd2222;
+  box-shadow: 0 0 30px var(--red-glow), 0 0 60px rgba(204, 17, 17, 0.2);
+  transform: translateY(-1px);
+}
+
+.start-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.login-footer-note {
+  margin-top: 20px;
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.7;
+  text-align: center;
+}
+
+/* ── Typewriter chars ── */
+.typewriter-char {
+  display: inline;
+  white-space: pre;
+  opacity: 0;
+  animation: typeIn 0.05s forwards;
+}
+
+@keyframes typeIn {
+  to { opacity: 1; }
+}
