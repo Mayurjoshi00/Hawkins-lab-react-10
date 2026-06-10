@@ -18,9 +18,21 @@ export default function AdminPanel() {
   const wsRef        = useRef(null);
   const toastRef     = useRef(null);
   const alertTimers  = useRef({});
+  const refreshIntervalRef = useRef(null);
+  const adminTokenRef = useRef(null);  // always up-to-date token for WS callbacks
 
   // ── Christmas lights (commented out in original) ──
   // useEffect(() => { buildLights(); }, []);
+
+  // ── Auto-refresh every 20s when logged in ────────────────────────────
+  useEffect(() => {
+    if (!loggedIn || !adminToken) return;
+    adminTokenRef.current = adminToken;
+    refreshIntervalRef.current = setInterval(() => {
+      renderDashboard(adminToken);
+    }, 20000);
+    return () => clearInterval(refreshIntervalRef.current);
+  }, [loggedIn, adminToken]); // eslint-disable-line
 
   // ── Display admin code on login screen ──
   // (shown as pw-box in original)
@@ -32,35 +44,43 @@ export default function AdminPanel() {
     }
     const token = 'admin_' + ADMIN_PASSWORD;
     setAdminToken(token);
+    adminTokenRef.current = token;
     setLoggedIn(true);
     setPassErr(false);
     renderDashboard(token);
     connectWS(token);
-    // Auto-refresh every 20s
-    const interval = setInterval(() => renderDashboard(token), 20000);
-    return () => clearInterval(interval);
   }
 
   function adminLogout() {
+    clearInterval(refreshIntervalRef.current);
+    if (wsRef.current) {
+      wsRef.current.onclose = null; // prevent auto-reconnect
+      wsRef.current.close();
+    }
+    adminTokenRef.current = null;
     setAdminToken(null);
     setLoggedIn(false);
-    if (wsRef.current) wsRef.current.close();
   }
 
   // ── WebSocket for live events ──
   function connectWS(token) {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    wsRef.current = new WebSocket(`${proto}://${location.host}`);
-    wsRef.current.onopen = () => {
-      wsRef.current.send(JSON.stringify({ type: 'AUTH_ADMIN', token }));
+    const ws = new WebSocket(`${proto}://${location.host}`);
+    wsRef.current = ws;
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: 'AUTH_ADMIN', token }));
       setWsStatus('LIVE');
     };
-    wsRef.current.onmessage = (e) => {
+    ws.onmessage = (e) => {
       try { handleWSMessage(JSON.parse(e.data), token); } catch {}
     };
-    wsRef.current.onclose = () => {
+    ws.onclose = () => {
+      // Only reconnect if still logged in
+      if (!adminTokenRef.current) return;
       setWsStatus('RECONNECTING');
-      setTimeout(() => connectWS(token), 3000);
+      setTimeout(() => {
+        if (adminTokenRef.current) connectWS(adminTokenRef.current);
+      }, 3000);
     };
   }
 

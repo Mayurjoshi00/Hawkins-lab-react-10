@@ -1,27 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import TEAM_CREDENTIALS from '../data/teams';
 import './LoginScreen.css';
 
+// ── API base: empty string = same origin (proxied to backend in dev via package.json proxy)
 const API = '';
 
 export default function LoginScreen({ onLogin }) {
-  const [teamId,    setTeamId]    = useState('');
-  const [pass,      setPass]      = useState('');
-  const [members,   setMembers]   = useState('');
-  const [error,     setError]     = useState('');
-  const [loading,   setLoading]   = useState(false);
-
-  // ── Typewriter char effect helper (mirrors original) ──
-  function typewriterText(el, text) {
-    el.textContent = '';
-    text.split('').forEach((ch, i) => {
-      const span = document.createElement('span');
-      span.className = 'typewriter-char';
-      span.textContent = ch;
-      span.style.animationDelay = (i * 15) + 'ms';
-      el.appendChild(span);
-    });
-  }
+  const [teamId,  setTeamId]  = useState('');
+  const [pass,    setPass]    = useState('');
+  const [members, setMembers] = useState('');
+  const [error,   setError]   = useState('');
+  const [loading, setLoading] = useState(false);
 
   async function handleLogin() {
     setError('');
@@ -31,17 +20,19 @@ export default function LoginScreen({ onLogin }) {
       setError('Enter your Team ID and access code.');
       return;
     }
-
     if (loading) return;
     setLoading(true);
 
+    // ── Step 1: Try the backend server ──────────────────────────────────────
+    let serverReachable = false;
     try {
-      // ── Try server-based login first (matches original behaviour) ──
       const res = await fetchWithTimeout(API + '/api/team/login', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ teamId: id, pass, members }),
-      }, 4000);
+      }, 5000);
+
+      serverReachable = true; // Server replied (even with an error code)
 
       if (res.ok) {
         const data = await res.json();
@@ -49,47 +40,57 @@ export default function LoginScreen({ onLogin }) {
         onLogin({
           teamId:        data.teamId,
           teamName:      data.teamName,
+          members:       members,
           sessionToken:  data.sessionToken,
           questionOrder: data.questionOrder,
-          answers:       data.answers,
-          flags:         data.flags,
-          totalSeconds:  data.totalSeconds,
-          usedSeconds:   data.usedSeconds,
+          answers:       data.answers        || new Array(60).fill(null),
+          flags:         data.flags          || new Array(60).fill(false),
+          totalSeconds:  data.totalSeconds   || 38 * 60,
+          usedSeconds:   data.usedSeconds    || 0,
           serverMode:    true,
         });
         return;
       }
-      // Server responded but returned an error (e.g. 401/404) —
-      // fall through to offline credential check below
+
+      // Server is running but rejected the login (wrong creds, already submitted, etc.)
+      let errMsg = 'Login failed.';
+      try {
+        const errBody = await res.json();
+        errMsg = errBody.error || errMsg;
+      } catch {}
+      setError(errMsg);
+      setLoading(false);
+      return; // ← STOP: don't fall through to offline when server is reachable
+
     } catch (e) {
-      // Network error or timeout — fall through to offline credential check below
-      if (e.name === 'AbortError') {
-        // Timed out — still fall through to offline mode
-      }
+      // Network error, timeout, or server not running → fall through to offline
+      serverReachable = false;
     }
 
-    // ── Fallback: standalone / offline mode (client-side credentials) ──
-    const cred = TEAM_CREDENTIALS.find(c => c.id === id && c.pass === pass);
-    if (!cred) {
-      setError('Invalid Team ID or access code.');
+    // ── Step 2: Offline / standalone fallback (only when server not reachable) ──
+    if (!serverReachable) {
+      const cred = TEAM_CREDENTIALS.find(c => c.id === id && c.pass === pass);
+      if (!cred) {
+        setError('Invalid Team ID or access code.');
+        setLoading(false);
+        return;
+      }
+
       setLoading(false);
+      onLogin({
+        teamId:        cred.id,
+        teamName:      cred.name,
+        members,
+        sessionToken:  null,   // offline — no server token
+        questionOrder: createQuestionOrder(),
+        answers:       new Array(60).fill(null),
+        flags:         new Array(60).fill(false),
+        totalSeconds:  38 * 60,
+        usedSeconds:   0,
+        serverMode:    false,
+      });
       return;
     }
-
-    const questionOrder = createQuestionOrder();
-    setLoading(false);
-    onLogin({
-      teamId:        cred.id,
-      teamName:      cred.name,
-      members,
-      sessionToken:  null, // offline
-      questionOrder,
-      answers:       new Array(60).fill(null),
-      flags:         new Array(60).fill(false),
-      totalSeconds:  38 * 60,
-      usedSeconds:   0,
-      serverMode:    false,
-    });
 
     setLoading(false);
   }
@@ -159,9 +160,9 @@ export default function LoginScreen({ onLogin }) {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function fetchWithTimeout(url, options = {}, ms = 30000) {
+function fetchWithTimeout(url, options = {}, ms = 5000) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), ms);
+  const timer      = setTimeout(() => controller.abort(), ms);
   return fetch(url, { ...options, signal: controller.signal })
     .finally(() => clearTimeout(timer));
 }

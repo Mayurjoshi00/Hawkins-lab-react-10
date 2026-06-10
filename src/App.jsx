@@ -9,9 +9,28 @@ import AdminPanel      from './components/AdminPanel';
 // ── Which screen is showing right now ────────────────────────────────────────
 // Possible values: 'home' | 'login' | 'landing' | 'quiz' | 'results' | 'admin'
 
-// Determine initial screen synchronously — before any render or effect
+// Determine initial screen synchronously — before any render or effect.
+// We check BOTH window.location.pathname (works in prod + CRA dev without proxy rewrite)
+// AND a sessionStorage flag (belt-and-suspenders for edge cases).
 function getInitialScreen() {
-  if (window.location.pathname === '/chmod777') return 'admin';
+  const path = window.location.pathname;
+  const hash = window.location.hash;
+
+  // Direct pathname match (works when CRA's history fallback serves index.html
+  // with pathname intact — which it does for /chmod777 without any proxy rewrite)
+  if (path === '/chmod777') return 'admin';
+
+  // Hash-based fallback: navigating to /#/chmod777 also opens admin
+  if (hash === '#/chmod777' || hash === '#chmod777') return 'admin';
+
+  // sessionStorage flag set by a redirect (belt-and-suspenders)
+  try {
+    if (sessionStorage.getItem('__hw_admin') === '1') {
+      sessionStorage.removeItem('__hw_admin');
+      return 'admin';
+    }
+  } catch {}
+
   return 'connecting';
 }
 
@@ -22,17 +41,18 @@ export default function App() {
   const [showRcToast, setShowRcToast] = useState(false);
   const rcTimerRef = useRef(null);
 
-  // ── Connecting → Login transition (matches original 200ms delay) ──
+  // ── Connecting → Home transition ──────────────────────────────────────────
+  // Only runs when we're NOT already on admin. The [] dep array means 'screen'
+  // is captured at mount time — which is fine because if initial screen is
+  // 'admin' we skip, and for every other start value we want to show home.
   useEffect(() => {
-    // Skip redirect if we're already showing the admin panel
-    if (screen === 'admin') return;
+    if (screen === 'admin') return; // already on admin — do nothing
     const t = setTimeout(() => setScreen('home'), 200);
     return () => clearTimeout(t);
-  }, []);
+  }, []); // eslint-disable-line
 
   // ── Protection: block right-click, copy, shortcuts ───────────────────────
   useEffect(() => {
-    // 1. Block right-click — show themed toast
     const onContextMenu = (e) => {
       e.preventDefault();
       setShowRcToast(true);
@@ -41,33 +61,21 @@ export default function App() {
       return false;
     };
 
-    // 2. Block keyboard shortcuts
     const onKeyDown = (e) => {
-      const k = e.key.toLowerCase();
+      const k    = e.key.toLowerCase();
       const ctrl = e.ctrlKey || e.metaKey;
-      // Ctrl+C, Ctrl+X, Ctrl+A, Ctrl+S, Ctrl+U, Ctrl+P
       if (ctrl && ['c', 'x', 'a', 's', 'u', 'p'].includes(k)) { e.preventDefault(); return false; }
-      // Ctrl+Shift+I / J / C (DevTools)
-      if (ctrl && e.shiftKey && ['i', 'j', 'c'].includes(k)) { e.preventDefault(); return false; }
-      // F12
-      if (e.key === 'F12') { e.preventDefault(); return false; }
-      // Ctrl+Shift+K (Firefox DevTools)
-      if (ctrl && e.shiftKey && k === 'k') { e.preventDefault(); return false; }
+      if (ctrl && e.shiftKey && ['i', 'j', 'c'].includes(k))   { e.preventDefault(); return false; }
+      if (e.key === 'F12')                                       { e.preventDefault(); return false; }
+      if (ctrl && e.shiftKey && k === 'k')                       { e.preventDefault(); return false; }
     };
 
-    // 3. Block copy and cut events
-    const onCopy = (e) => { e.preventDefault(); return false; };
-    const onCut  = (e) => { e.preventDefault(); return false; };
-
-    // 4. Block drag-to-copy
+    const onCopy      = (e) => { e.preventDefault(); return false; };
+    const onCut       = (e) => { e.preventDefault(); return false; };
     const onDragStart = (e) => { e.preventDefault(); return false; };
 
-    // 5. Block print
-    const onBeforePrint = () => false;
-
-    // 6. Disable text selection via JS (inputs still selectable via CSS)
     document.onselectstart = (e) => {
-      if (e.target && e.target.tagName === 'INPUT') return true;
+      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return true;
       e.preventDefault();
       return false;
     };
@@ -77,7 +85,7 @@ export default function App() {
     document.addEventListener('copy',        onCopy);
     document.addEventListener('cut',         onCut);
     document.addEventListener('dragstart',   onDragStart);
-    window.onbeforeprint = onBeforePrint;
+    window.onbeforeprint = () => false;
 
     return () => {
       document.removeEventListener('contextmenu', onContextMenu);
@@ -89,12 +97,14 @@ export default function App() {
     };
   }, []);
 
-  // ── Route: /chmod777 → admin panel ──────────────────────────────────────
-  // (Initial detection is handled by getInitialScreen above)
-  // This only handles navigation changes during a live session
+  // ── Route: /chmod777 → admin panel (handles popstate / link navigation) ──
   useEffect(() => {
     const onPopState = () => {
-      if (window.location.pathname === '/chmod777') setScreen('admin');
+      const p = window.location.pathname;
+      const h = window.location.hash;
+      if (p === '/chmod777' || h === '#/chmod777' || h === '#chmod777') {
+        setScreen('admin');
+      }
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
@@ -112,7 +122,6 @@ export default function App() {
 
   function handleSubmit(resultData) {
     setResults(resultData);
-    // Screen transition is handled inside QuizScreen after celebration
     setScreen('results');
   }
 
@@ -151,16 +160,13 @@ export default function App() {
   return (
     <>
       <div className="vignette" />
-      {/* ── Panic border (controlled by body class in QuizScreen) ── */}
       <div className="panic-border" id="panic-border" />
       <div className="panic-label" id="panic-label">⚠ THE DEMOGORGON IS NEAR ⚠</div>
 
-      {/* ── Right-click blocked toast ── */}
       <div className={`rc-blocked${showRcToast ? ' show' : ''}`}>
         ⬡ Right-click is disabled during the quiz
       </div>
 
-      {/* ── Route rendering ── */}
       {screen === 'home'    && <HomeScreen    onEnter={() => setScreen('login')} />}
       {screen === 'login'   && <LoginScreen   onLogin={handleLogin} />}
       {screen === 'landing' && <LandingScreen teamData={teamData} onStart={handleStart} />}

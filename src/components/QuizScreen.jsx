@@ -81,27 +81,52 @@ export default function QuizScreen({ teamData, onSubmit }) {
     wsRef.current.onclose = () => setTimeout(connectWS, 3000);
   }
 
-  // ── Tab / window visibility detection (report to server) ──
+  // ── Tab / window visibility detection (report to server) ──────────────
+  //
+  // DESIGN:
+  //  • lastTabSwitchRef persists across renders (unlike a let inside useEffect)
+  //    so the 3-second debounce is never accidentally reset.
+  //  • We use ONLY visibilitychange — it's the most reliable cross-browser
+  //    signal for "user switched to another tab or minimised the window".
+  //  • window.blur is intentionally NOT used: it fires when the user clicks
+  //    any browser UI element (address bar, devtools, another window) AND
+  //    simultaneously with visibilitychange on tab switch, causing double-counts.
+  //  • We also check document.hidden inside the handler so that focus loss
+  //    from e.g. an in-page dialog does NOT trigger a false positive.
+  //  • Submitted teams are guarded on the server side too, but we skip the
+  //    fetch early to avoid noise.
+  // ────────────────────────────────────────────────────────────────────────
+  const lastTabSwitchRef = useRef(0);   // timestamp of last reported switch
+  const submittedRef     = useRef(false); // set to true on quiz submit
+
   useEffect(() => {
-    let lastBlurTime = 0;
+    if (!serverMode) return; // offline mode — nothing to report
+
     function reportTabSwitch() {
+      // Only fire when the page is actually hidden (real tab switch / minimise)
+      if (!document.hidden) return;
+
+      // Debounce: ignore if we already reported within the last 3 seconds
       const now = Date.now();
-      if (now - lastBlurTime < 2000) return;
-      lastBlurTime = now;
-      if (!serverMode) return;
+      if (now - lastTabSwitchRef.current < 3000) return;
+      lastTabSwitchRef.current = now;
+
+      // Don't report after quiz is submitted
+      if (submittedRef.current) return;
+
       fetch(API + '/api/quiz/tabswitch', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ teamId: teamData.teamId, sessionToken: teamData.sessionToken }),
+        body:    JSON.stringify({
+          teamId:       teamData.teamId,
+          sessionToken: teamData.sessionToken,
+        }),
       }).catch(() => {});
     }
-    const onVisibility = () => { if (document.hidden && teamData?.sessionToken) reportTabSwitch(); };
-    const onBlur       = () => { if (teamData?.sessionToken) reportTabSwitch(); };
-    document.addEventListener('visibilitychange', onVisibility);
-    window.addEventListener('blur', onBlur);
+
+    document.addEventListener('visibilitychange', reportTabSwitch);
     return () => {
-      document.removeEventListener('visibilitychange', onVisibility);
-      window.removeEventListener('blur', onBlur);
+      document.removeEventListener('visibilitychange', reportTabSwitch);
     };
   }, [serverMode]); // eslint-disable-line
 
@@ -179,6 +204,7 @@ export default function QuizScreen({ teamData, onSubmit }) {
   async function handleFinalSubmit() {
     clearInterval(timerRef.current);
     clearInterval(heartbeatRef.current);
+    submittedRef.current = true;  // stop tab-switch reporting
     setShowModal(false);
     document.body.classList.remove('panic-mode');
 

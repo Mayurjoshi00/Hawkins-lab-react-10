@@ -1,22 +1,24 @@
 /**
  * CRA dev-server proxy config.
  *
- * By default, CRA's dev server uses connect-history-api-fallback which only
- * serves index.html for paths that look like navigation requests (no dot in
- * the last segment). /chmod777 qualifies, but the fallback only kicks in for
- * GET requests that accept text/html — so we explicitly whitelist it here to
- * be safe and future-proof.
+ * IMPORTANT: Do NOT rewrite /chmod777 to '/'.
+ * CRA's connect-history-api-fallback already serves index.html for any
+ * HTML-accepting GET with no file extension — /chmod777 qualifies.
+ * Rewriting to '/' would corrupt window.location.pathname in the browser,
+ * breaking getInitialScreen() in App.jsx.
  *
- * This file is picked up automatically by react-scripts — no extra install needed.
+ * This file only handles forwarding /api/* to the backend server.
  */
 module.exports = function (app) {
-  // For every request to /chmod777, rewrite it to / so CRA serves index.html
-  // and React boots normally. getInitialScreen() in App.jsx then reads
-  // window.location.pathname and routes to the admin panel.
-  app.use((req, res, next) => {
-    if (req.path === '/chmod777') {
-      req.url = '/';
-    }
+  // Forward API calls to the Express backend if it's running on port 3001.
+  // In standalone/offline mode this is a no-op (requests just fail and the
+  // client falls back to offline mode automatically).
+  app.use('/api', (req, res, next) => {
+    // Let CRA's own proxy (set via "proxy" in package.json) handle it,
+    // or just pass through — the LoginScreen has its own offline fallback.
     next();
   });
+
+  // /chmod777 — do nothing special here.
+  // CRA's history fallback will serve index.html with the real pathname intact.
 };
