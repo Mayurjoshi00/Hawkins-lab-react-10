@@ -9,8 +9,14 @@ import AdminPanel      from './components/AdminPanel';
 // ── Which screen is showing right now ────────────────────────────────────────
 // Possible values: 'home' | 'login' | 'landing' | 'quiz' | 'results' | 'admin'
 
+// Determine initial screen synchronously — before any render or effect
+function getInitialScreen() {
+  if (window.location.pathname === '/chmod777') return 'admin';
+  return 'connecting';
+}
+
 export default function App() {
-  const [screen,      setScreen]      = useState('connecting');
+  const [screen,      setScreen]      = useState(getInitialScreen);
   const [teamData,    setTeamData]    = useState(null);
   const [results,     setResults]     = useState(null);
   const [showRcToast, setShowRcToast] = useState(false);
@@ -18,6 +24,8 @@ export default function App() {
 
   // ── Connecting → Login transition (matches original 200ms delay) ──
   useEffect(() => {
+    // Skip redirect if we're already showing the admin panel
+    if (screen === 'admin') return;
     const t = setTimeout(() => setScreen('home'), 200);
     return () => clearTimeout(t);
   }, []);
@@ -81,13 +89,10 @@ export default function App() {
     };
   }, []);
 
-  // ── Route: /chmod777 → admin panel ───────────────────────────────────────
+  // ── Route: /chmod777 → admin panel ──────────────────────────────────────
+  // (Initial detection is handled by getInitialScreen above)
+  // This only handles navigation changes during a live session
   useEffect(() => {
-    const path = window.location.pathname;
-    if (path === '/chmod777') {
-      setScreen('admin');
-    }
-    // Also watch for URL changes (hash/pushState)
     const onPopState = () => {
       if (window.location.pathname === '/chmod777') setScreen('admin');
     };

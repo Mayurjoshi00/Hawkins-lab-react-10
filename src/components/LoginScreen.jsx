@@ -59,39 +59,37 @@ export default function LoginScreen({ onLogin }) {
         });
         return;
       }
-      const errData = await res.json().catch(() => ({}));
-      setError(errData.error || 'Login failed.');
+      // Server responded but returned an error (e.g. 401/404) —
+      // fall through to offline credential check below
     } catch (e) {
-      // ── Fallback: standalone / offline mode (client-side credentials) ──
-      if (e.name !== 'AbortError') {
-        // Server not reachable — use bundled credentials
-        const cred = TEAM_CREDENTIALS.find(c => c.id === id && c.pass === pass);
-        if (!cred) {
-          setError('Invalid Team ID or access code.');
-          setLoading(false);
-          return;
-        }
-
-        // Build a local question order (shuffled per section)
-        const questionOrder = createQuestionOrder();
-
-        setLoading(false);
-        onLogin({
-          teamId:        cred.id,
-          teamName:      cred.name,
-          members,
-          sessionToken:  null, // offline
-          questionOrder,
-          answers:       new Array(60).fill(null),
-          flags:         new Array(60).fill(false),
-          totalSeconds:  38 * 60,
-          usedSeconds:   0,
-          serverMode:    false,
-        });
-        return;
+      // Network error or timeout — fall through to offline credential check below
+      if (e.name === 'AbortError') {
+        // Timed out — still fall through to offline mode
       }
-      setError('Server is busy — please wait a moment and try again.');
     }
+
+    // ── Fallback: standalone / offline mode (client-side credentials) ──
+    const cred = TEAM_CREDENTIALS.find(c => c.id === id && c.pass === pass);
+    if (!cred) {
+      setError('Invalid Team ID or access code.');
+      setLoading(false);
+      return;
+    }
+
+    const questionOrder = createQuestionOrder();
+    setLoading(false);
+    onLogin({
+      teamId:        cred.id,
+      teamName:      cred.name,
+      members,
+      sessionToken:  null, // offline
+      questionOrder,
+      answers:       new Array(60).fill(null),
+      flags:         new Array(60).fill(false),
+      totalSeconds:  38 * 60,
+      usedSeconds:   0,
+      serverMode:    false,
+    });
 
     setLoading(false);
   }
