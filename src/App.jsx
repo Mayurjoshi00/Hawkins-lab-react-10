@@ -5,6 +5,7 @@ import LandingScreen   from './components/LandingScreen';
 import QuizScreen      from './components/QuizScreen';
 import ResultsScreen   from './components/ResultsScreen';
 import AdminPanel      from './components/AdminPanel';
+import VecnaTendrils   from './components/VecnaTendrils';
 
 function getInitialScreen() {
   const path = window.location.pathname;
@@ -111,6 +112,10 @@ export default function App() {
   const [results,     setResults]     = useState(null);
   const [showRcToast, setShowRcToast] = useState(false);
 
+  // Vecna tendril state — triggered by Enter The Lab
+  const [tendrilActive, setTendrilActive] = useState(false);
+  const [tendrilOrigin, setTendrilOrigin] = useState({ x: 0, y: 0 });
+
   // Portal state
   const [portalPhase,  setPortalPhase]  = useState(null); // null | 'opening' | 'expanding'
   const [gateActive,   setGateActive]   = useState(false);
@@ -176,6 +181,25 @@ export default function App() {
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
+  // ── Enter The Lab: Vecna tendrils then go to login ──
+  function handleEnterLab(e) {
+    // Get button center as origin for the tendrils
+    let ox = window.innerWidth  / 2;
+    let oy = window.innerHeight / 2;
+    if (e && e.currentTarget) {
+      const r = e.currentTarget.getBoundingClientRect();
+      ox = r.left + r.width  / 2;
+      oy = r.top  + r.height / 2;
+    }
+    setTendrilOrigin({ x: ox, y: oy });
+    setTendrilActive(true);
+  }
+
+  function handleTendrilDone() {
+    setTendrilActive(false);
+    setScreen('login');
+  }
+
   // ── Login: show portal, then transition ──
   function handleLogin(data) {
     setPendingLogin(data);
@@ -236,12 +260,20 @@ export default function App() {
         ⬡ Right-click is disabled during the quiz
       </div>
 
-      {screen === 'home'    && <HomeScreen    onEnter={() => setScreen('login')} />}
+      {screen === 'home'    && <HomeScreen    onEnter={handleEnterLab} />}
       {screen === 'login'   && <LoginScreen   onLogin={handleLogin} />}
       {screen === 'landing' && <LandingScreen teamData={teamData} onStart={handleStart} />}
       {screen === 'quiz'    && <QuizScreen    teamData={teamData}  onSubmit={handleSubmit} />}
       {screen === 'results' && <ResultsScreen teamData={teamData}  results={results} onReset={handleReset} />}
       {screen === 'admin'   && <AdminPanel />}
+
+      {/* Vecna tendrils — shown when Enter The Lab is clicked */}
+      <VecnaTendrils
+        active={tendrilActive}
+        originX={tendrilOrigin.x}
+        originY={tendrilOrigin.y}
+        onDone={handleTendrilDone}
+      />
 
       {/* Portal overlay — shown on login success */}
       <PortalOverlay phase={portalPhase} onDone={handlePortalDone} />

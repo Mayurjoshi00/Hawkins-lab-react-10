@@ -128,7 +128,7 @@ export default function HomeScreen({ onEnter }) {
         </div>
 
         <div className="cta-group hero-entrance" style={{ animationDelay: '0.65s' }}>
-          <button className="cta-btn cta-primary btn-submit-pulse" onClick={onEnter}>
+          <button className="cta-btn cta-primary btn-submit-pulse" onClick={e => onEnter(e)}>
             ⬡ &nbsp; Enter The Lab
           </button>
         </div>
@@ -244,7 +244,7 @@ export default function HomeScreen({ onEnter }) {
           Don't let the Mind Flayer win.
         </p>
         <div className="cta-group">
-          <button className="cta-btn cta-primary btn-submit-pulse" onClick={onEnter}>
+          <button className="cta-btn cta-primary btn-submit-pulse" onClick={e => onEnter(e)}>
             ⬡ &nbsp; Begin The Quiz
           </button>
         </div>
@@ -255,7 +255,7 @@ export default function HomeScreen({ onEnter }) {
         <div className="footer-logo">⬡ <span>HAWKINS</span> NATIONAL LABORATORY</div>
         <div className="footer-text">All activity monitored · Authorized personnel only · 1986</div>
         <div className="footer-links">
-          <button className="footer-link" onClick={onEnter}>Enter Lab</button>
+          <button className="footer-link" onClick={e => onEnter(e)}>Enter Lab</button>
         </div>
       </footer>
     </div>
