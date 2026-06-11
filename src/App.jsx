@@ -104,10 +104,6 @@ function GateRipple({ active }) {
   return <div className="gate-ripple-overlay active" />;
 }
 
-/* ── Scan sweep line ── */
-function ScanSweep() {
-  return <div className="scan-sweep" />;
-}
 
 export default function App() {
   const [screen,      setScreen]      = useState(getInitialScreen);
@@ -219,7 +215,6 @@ export default function App() {
   if (screen === 'connecting') {
     return (
       <div className="connecting-screen tv-on">
-        <div className="scan-sweep" />
         <div className="connecting-signal">
           <div className="connecting-dot" />
         </div>
@@ -235,8 +230,6 @@ export default function App() {
       <div className="vignette" />
       <div className="panic-border" id="panic-border" />
       <div className="panic-label"  id="panic-label">⚠ THE DEMOGORGON IS NEAR ⚠</div>
-      <ScanSweep />
-
       {showVines && <VineDecoration />}
 
       <div className={`rc-blocked${showRcToast ? ' show' : ''}`}>

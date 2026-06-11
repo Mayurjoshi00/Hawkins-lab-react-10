@@ -78,11 +78,9 @@ export default function HomeScreen({ onEnter }) {
 
   return (
     <div className="home-page">
-      {/* ── Christmas Lights ── */}
-      <LightsStrip />
 
       {/* ── Nav (shifted down for lights) ── */}
-      <nav className="nav nav-with-lights">
+      <nav className="nav">
         <div className="nav-logo lab-static">⬡ <span>HAWKINS</span> LAB</div>
         <div className="nav-links">
           <a href="#how"         className="nav-link" onClick={e => handleNavClick(e, '#how')}>How It Works</a>
