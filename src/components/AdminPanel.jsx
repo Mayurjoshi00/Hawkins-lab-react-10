@@ -189,6 +189,10 @@ export default function AdminPanel() {
     return new Date(ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
 
+  function calcMarks(pct) {
+    return Math.round(pct * 0.5 * 10) / 10;
+  }
+
   // ── Derived stats ──
   const submitted   = teams.filter(t => t.submitted);
   const avg         = submitted.length ? Math.round(submitted.reduce((s, t) => s + t.pct, 0) / submitted.length) : null;
@@ -394,6 +398,7 @@ export default function AdminPanel() {
                 <th>#</th>
                 <th>Team</th>
                 <th>Score</th>
+                <th>Marks</th>
                 <th>Correct</th>
                 <th>Wrong</th>
                 <th>Skipped</th>
@@ -406,7 +411,7 @@ export default function AdminPanel() {
             <tbody>
               {teams.length === 0 ? (
                 <tr>
-                  <td colSpan={10}>
+                  <td colSpan={11}>
                     <div className="empty-state">
                       <div className="empty-icon">📡</div>
                       <div className="empty-title">Waiting for teams...</div>
@@ -437,6 +442,9 @@ export default function AdminPanel() {
                         ) : (
                           <span style={{ color:'var(--amber)', fontSize:'12px', fontFamily:'var(--font-display)', letterSpacing:'.08em' }}>● IN PROGRESS</span>
                         )}
+                      </td>
+                      <td className="stat-cell" style={{ color:'#bb55ee' }}>
+                        {t.submitted ? calcMarks(t.pct) : '—'}
                       </td>
                       <td className="stat-cell" style={{ color:'var(--red)' }}>{t.submitted ? t.correct : '—'}</td>
                       <td className="stat-cell" style={{ color:'#ff6060' }}>{t.submitted ? t.wrong   : '—'}</td>
