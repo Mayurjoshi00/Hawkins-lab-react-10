@@ -19,7 +19,8 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "start:server": "node server/index.js",
-    "start:all": "concurrently \"npm run start:server\" \"npm start\""
+    "start:all": "concurrently \"npm run start:server\" \"npm start\"",
+    "start:prod": "npm run build && node server/index.js"
   },
   "browserslist": {
     "production": [

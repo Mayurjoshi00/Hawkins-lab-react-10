@@ -1,4 +1,5 @@
 const express    = require('express');
+const path       = require('path');
 const http       = require('http');
 const WebSocket  = require('ws');
 const compression = require('compression');
@@ -331,6 +332,20 @@ app.get('/api/questions', (_req, res) => {
   res.set('Cache-Control', 'public, max-age=86400, immutable');
   res.type('application/json').send(QUESTIONS_JSON);
 });
+
+// ── Serve React build in production ──────────────────────────────────────────
+const BUILD_DIR = path.join(__dirname, '..', 'build');
+const fs = require('fs');
+if (fs.existsSync(BUILD_DIR)) {
+  app.use(express.static(BUILD_DIR));
+  // All non-API routes serve index.html (React handles routing client-side)
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api')) {
+      res.sendFile(path.join(BUILD_DIR, 'index.html'));
+    }
+  });
+  console.log('\x1b[32m✅ Serving React build from /build\x1b[0m');
+}
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 server.keepAliveTimeout = 65000;
