@@ -16,7 +16,7 @@ You should see:
 
 ### Terminal 2 — React Frontend (port 3000)
 ```bash
-npm start
+npm run dev
 ```
 
 Then open **http://localhost:3000** in your browser.
@@ -34,6 +34,21 @@ npm run start:all
 |-----|-------------|
 | `http://localhost:3000` | Quiz home page |
 | `http://localhost:3000/chmod777` | Admin control panel |
+
+## Deploy on Render
+
+Use a **Web Service** (not Static Site) because this app has a Node backend and WebSockets.
+
+| Setting | Value |
+|---------|-------|
+| **Build Command** | `npm install && npm run build` |
+| **Start Command** | `npm start` |
+
+Render sets `PORT` automatically; the server already uses it. Do **not** use `npm run dev`, `npm run start:all`, or `react-scripts start` on Render — those run the dev server and cause **Invalid Host header**.
+
+After deploy, open your Render URL (e.g. `https://your-app.onrender.com`).
+
+---
 
 ## Admin Panel
 - URL: `http://localhost:3000/chmod777`
