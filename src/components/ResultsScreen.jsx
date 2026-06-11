@@ -56,7 +56,7 @@ export default function ResultsScreen({ teamData, results, onReset }) {
   }, []);
 
   return (
-    <div className="results-screen screen">
+    <div className={`results-screen screen results-entrance ${pct >= 60 ? 'results-win' : 'results-lose'}`}>
       <div className="result-header">
         <div className="result-team">{teamName ? `Team: ${teamName}` : ''}</div>
         <div className="st-title result-title">{outcomeTitle(pct)}</div>

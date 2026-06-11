@@ -330,19 +330,19 @@ export default function QuizScreen({ teamData, onSubmit }) {
               <span style={{ color:'var(--red)', fontFamily:'var(--font-display)', letterSpacing:'.08em' }}>SECTION A</span>
               <span>{eAns}/15</span>
             </div>
-            <div className="prog-bar"><div className="prog-fill easy" style={{ width: `${(eAns/15)*100}%` }} /></div>
+            <div className="prog-bar"><div className="prog-fill easy quiz-progress-glow" style={{ width: `${(eAns/15)*100}%` }} /></div>
 
             <div className="prog-label" style={{ marginTop: 8 }}>
               <span style={{ color:'var(--amber)', fontFamily:'var(--font-display)', letterSpacing:'.08em' }}>SECTION B</span>
               <span>{mAns}/30</span>
             </div>
-            <div className="prog-bar"><div className="prog-fill medium" style={{ width: `${(mAns/30)*100}%` }} /></div>
+            <div className="prog-bar"><div className="prog-fill medium quiz-progress-glow" style={{ width: `${(mAns/30)*100}%` }} /></div>
 
             <div className="prog-label" style={{ marginTop: 8 }}>
               <span style={{ color:'#aa44cc', fontFamily:'var(--font-display)', letterSpacing:'.08em' }}>SECTION C</span>
               <span>{hAns}/15</span>
             </div>
-            <div className="prog-bar"><div className="prog-fill hard" style={{ width: `${(hAns/15)*100}%` }} /></div>
+            <div className="prog-bar"><div className="prog-fill hard quiz-progress-glow" style={{ width: `${(hAns/15)*100}%` }} /></div>
           </div>
 
           <div className="section-tabs">
@@ -398,7 +398,7 @@ export default function QuizScreen({ teamData, onSubmit }) {
         </div>
 
         {/* ── Main Content ── */}
-        <div className="main-content">
+        <div className="main-content question-slide-enter" key={current}>
           <div className="q-header">
             <div className="q-meta">
               <span className="q-num">Q {current + 1} / 60</span>

@@ -10,7 +10,7 @@
 /* ── Nav ── */
 .nav {
   position: fixed;
-  top: 0;  /* was top:36px when lights strip was on */
+  top: 0;
   left: 0;
   right: 0;
   z-index: 50;
@@ -34,6 +34,11 @@
 .nav-logo span {
   color: var(--red);
   text-shadow: 0 0 10px var(--red-glow);
+}
+
+/* nav shifted down when lights strip is active */
+.nav-with-lights {
+  top: 32px;
 }
 
 .nav-links {

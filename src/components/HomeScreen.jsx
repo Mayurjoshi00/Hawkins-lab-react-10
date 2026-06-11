@@ -1,15 +1,15 @@
 import React, { useEffect, useRef } from 'react';
 import './HomeScreen.css';
 
-// ── Generate Christmas Lights ─────────────────────────────────────────────
+/* ── Christmas Lights (re-enabled) ── */
 function LightsStrip() {
   const stripRef = useRef(null);
-
   useEffect(() => {
     const strip = stripRef.current;
     if (!strip) return;
     const colors = ['lb-red','lb-amber','lb-green','lb-blue','lb-yellow','lb-purple','lb-white'];
     const count  = Math.floor(window.innerWidth / 22) || 50;
+    strip.innerHTML = '';
     for (let i = 0; i < count; i++) {
       const b = document.createElement('div');
       b.className = 'light-bulb ' + colors[i % colors.length];
@@ -18,33 +18,58 @@ function LightsStrip() {
       strip.appendChild(b);
     }
   }, []);
+  return <div className="lights-strip lights-strip-active" ref={stripRef} />;
+}
 
-  return <div className="lights-strip" ref={stripRef} />;
+/* ── Floating Particles ── */
+function HeroParticles() {
+  const PARTICLES = Array.from({ length: 18 }, (_, i) => ({
+    left:   `${5 + (i * 5.5) % 90}%`,
+    dur:    `${7 + (i * 1.3) % 8}s`,
+    delay:  `${(i * 0.7) % 6}s`,
+    drift:  `${-30 + (i * 7) % 60}px`,
+    drift2: `${-20 + (i * 5) % 40}px`,
+    size:   i % 4 === 0 ? '3px' : '2px',
+    color:  i % 5 === 0 ? 'rgba(200,100,255,0.5)' : i % 3 === 0 ? 'rgba(204,17,17,0.5)' : 'rgba(180,60,60,0.35)',
+  }));
+
+  return (
+    <div className="hero-particles" aria-hidden="true">
+      {PARTICLES.map((p, i) => (
+        <div key={i} className="hero-particle" style={{
+          left: p.left,
+          bottom: '-10px',
+          width: p.size, height: p.size,
+          background: p.color,
+          '--dur':    p.dur,
+          '--delay':  p.delay,
+          '--drift':  p.drift,
+          '--drift2': p.drift2,
+        }} />
+      ))}
+    </div>
+  );
 }
 
 export default function HomeScreen({ onEnter }) {
-  // ── Smooth scroll for nav links ──
+  /* ── Smooth scroll ── */
   function handleNavClick(e, hash) {
     e.preventDefault();
     const target = document.querySelector(hash);
     if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  // ── Animate on scroll ──
+  /* ── Scroll reveal for cards/steps ── */
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.style.opacity = '1';
-          entry.target.style.transform = 'translateY(0)';
-        }
+        if (entry.isIntersecting) entry.target.classList.add('visible');
       });
-    }, { threshold: 0.1 });
+    }, { threshold: 0.12 });
 
-    document.querySelectorAll('.feat-card, .step, .mock-row').forEach(el => {
-      el.style.opacity    = '0';
-      el.style.transform  = 'translateY(20px)';
-      el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+    document.querySelectorAll('.feat-card, .step, .mock-row').forEach((el, i) => {
+      el.classList.add('reveal-up');
+      el.style.transitionDelay = `${i * 0.07}s`;
       observer.observe(el);
     });
 
@@ -54,35 +79,38 @@ export default function HomeScreen({ onEnter }) {
   return (
     <div className="home-page">
       {/* ── Christmas Lights ── */}
-      {/* <LightsStrip /> */}
+      <LightsStrip />
 
-      {/* ── Nav ── */}
-      <nav className="nav">
-        <div className="nav-logo">⬡ <span>HAWKINS</span> LAB</div>
+      {/* ── Nav (shifted down for lights) ── */}
+      <nav className="nav nav-with-lights">
+        <div className="nav-logo lab-static">⬡ <span>HAWKINS</span> LAB</div>
         <div className="nav-links">
           <a href="#how"         className="nav-link" onClick={e => handleNavClick(e, '#how')}>How It Works</a>
           <a href="#leaderboard" className="nav-link" onClick={e => handleNavClick(e, '#leaderboard')}>Leaderboard</a>
-          {/* <a href="/chmod777" className="nav-admin-btn">⬡ Admin</a> */}
         </div>
       </nav>
 
       {/* ── Hero ── */}
-      <section className="hero" id="hero">
+      <section className="hero" id="hero" style={{ position: 'relative', overflow: 'hidden' }}>
+        <HeroParticles />
         <div className="scanline" />
 
-        <div className="hero-eyebrow">Hawkins National Laboratory · Classified Event · 1986</div>
+        <div className="hero-eyebrow hero-eyebrow-entrance">
+          Hawkins National Laboratory · Classified Event · 1986
+        </div>
 
-        <div className="st-title hero-title">STRANGER<br />THINGS</div>
-        {/* <div className="hero-sub">Quiz Night</div> */}
+        <div className="hero-title-wrap">
+          <div className="st-title hero-title hero-entrance">STRANGER<br />THINGS</div>
+        </div>
 
         <div className="hero-divider" />
 
-        <p className="hero-desc">
+        <p className="hero-desc hero-entrance" style={{ animationDelay: '0.3s' }}>
           Welcome to the Lab. Your team has been cleared for access.<br />
           Navigate the Upside Down — answer wisely, survive the questions.
         </p>
 
-        <div className="quiz-meta">
+        <div className="quiz-meta hero-entrance" style={{ animationDelay: '0.5s' }}>
           <div className="meta-badge">
             <span className="meta-val">60</span>
             <span className="meta-label">Questions</span>
@@ -92,7 +120,7 @@ export default function HomeScreen({ onEnter }) {
             <span className="meta-label">Sections</span>
           </div>
           <div className="meta-badge">
-            <span className="meta-val">45</span>
+            <span className="meta-val">38</span>
             <span className="meta-label">Min Timer</span>
           </div>
           <div className="meta-badge live-badge">
@@ -101,12 +129,13 @@ export default function HomeScreen({ onEnter }) {
           </div>
         </div>
 
-        <div className="cta-group">
-          <button className="cta-btn cta-primary" onClick={onEnter}>⬡ &nbsp; Enter The Lab</button>
-          {/* <button className="cta-btn cta-secondary">⬡ &nbsp; Control Room</button> */}
+        <div className="cta-group hero-entrance" style={{ animationDelay: '0.65s' }}>
+          <button className="cta-btn cta-primary btn-submit-pulse" onClick={onEnter}>
+            ⬡ &nbsp; Enter The Lab
+          </button>
         </div>
 
-        <div className="section-eyebrow">What awaits your team</div>
+        <div className="section-eyebrow" style={{ marginTop: '60px' }}>What awaits your team</div>
 
         <div className="features">
           <div className="feat-card fc-red">
@@ -184,11 +213,11 @@ export default function HomeScreen({ onEnter }) {
             <div className="preview-header-live"><span className="live-dot" /> LIVE</div>
           </div>
           {[
-            { rank: 1, cls: 'r1', name: 'Hawkins Heroes',     pct: 88, color: 'var(--red)',    tag: 'done' },
-            { rank: 2, cls: 'r2', name: 'The Demogorgons',    pct: 74, color: 'var(--amber)',  tag: 'done' },
-            { rank: 3, cls: 'r3', name: 'Upside Down Gang',   pct: 61, color: '#c07030',       tag: 'done' },
-            { rank: 4, cls: 'rn', name: "Mind Flayer Fan Club", pct: 0, color:'var(--text-dim)',tag:'live' },
-            { rank: 5, cls: 'rn', name: "Eleven's Army",      pct:  0, color:'var(--text-dim)',tag:'live' },
+            { rank: 1, cls: 'r1', name: 'Hawkins Heroes',       pct: 88, color: 'var(--red)',     tag: 'done' },
+            { rank: 2, cls: 'r2', name: 'The Demogorgons',      pct: 74, color: 'var(--amber)',   tag: 'done' },
+            { rank: 3, cls: 'r3', name: 'Upside Down Gang',     pct: 61, color: '#c07030',        tag: 'done' },
+            { rank: 4, cls: 'rn', name: "Mind Flayer Fan Club", pct:  0, color:'var(--text-dim)', tag: 'live' },
+            { rank: 5, cls: 'rn', name: "Eleven's Army",        pct:  0, color:'var(--text-dim)', tag: 'live' },
           ].map(row => (
             <div className="mock-row" key={row.rank}>
               <div className={`mock-rank ${row.cls}`}>{row.rank}</div>
@@ -217,7 +246,9 @@ export default function HomeScreen({ onEnter }) {
           Don't let the Mind Flayer win.
         </p>
         <div className="cta-group">
-          <button className="cta-btn cta-primary" onClick={onEnter}>⬡ &nbsp; Begin The Quiz</button>
+          <button className="cta-btn cta-primary btn-submit-pulse" onClick={onEnter}>
+            ⬡ &nbsp; Begin The Quiz
+          </button>
         </div>
       </section>
 
@@ -227,7 +258,6 @@ export default function HomeScreen({ onEnter }) {
         <div className="footer-text">All activity monitored · Authorized personnel only · 1986</div>
         <div className="footer-links">
           <button className="footer-link" onClick={onEnter}>Enter Lab</button>
-          {/* <a href="/chmod777" className="footer-link">Admin</a> */}
         </div>
       </footer>
     </div>

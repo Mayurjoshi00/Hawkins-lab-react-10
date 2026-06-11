@@ -1,19 +1,33 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import './LandingScreen.css';
 
 export default function LandingScreen({ teamData, onStart }) {
   const teamName = teamData?.teamName || '';
 
-  return (
-    <div className="landing-screen screen">
-      <div className="team-greeting">Welcome back, {teamName}! 👋</div>
+  /* ── Stagger stat pills and sp-cards on mount ── */
+  useEffect(() => {
+    const els = document.querySelectorAll('.stat-pill, .sp-card');
+    els.forEach((el, i) => {
+      el.style.opacity   = '0';
+      el.style.transform = 'translateY(18px)';
+      el.style.transition = `opacity 0.45s ease ${0.1 + i * 0.1}s, transform 0.45s ease ${0.1 + i * 0.1}s`;
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        el.style.opacity   = '1';
+        el.style.transform = 'translateY(0)';
+      }));
+    });
+  }, []);
 
-      <div className="st-title landing-title">
-        The Quiz<br /><span>Awaits</span>
+  return (
+    <div className="landing-screen screen tv-on">
+      <div className="team-greeting typing-cursor">Welcome, {teamName}</div>
+
+      <div className="st-title landing-title hero-entrance">
+        The Gate<br /><span>Is Open</span>
       </div>
 
-      <p className="landing-sub">
-        60 questions across three levels of the Upside Down. Your answers are saved to the server in real time —
+      <p className="landing-sub hero-entrance" style={{ animationDelay: '0.2s' }}>
+        60 questions across three levels of the Upside Down. Your answers are saved in real time —
         a refresh will restore your progress. Stay focused. The Mind Flayer is watching.
       </p>
 
@@ -59,7 +73,7 @@ export default function LandingScreen({ teamData, onStart }) {
         </div>
       </div>
 
-      <button className="begin-btn" onClick={onStart}>
+      <button className="begin-btn btn-submit-pulse" onClick={onStart}>
         ▶ &nbsp; ENTER THE GATE
       </button>
     </div>

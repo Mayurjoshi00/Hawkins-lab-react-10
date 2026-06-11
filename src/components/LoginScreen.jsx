@@ -102,8 +102,8 @@ export default function LoginScreen({ onLogin }) {
   }
 
   return (
-    <div className="login-screen screen">
-      <div className="login-wrap">
+    <div className="login-screen screen tv-on">
+      <div className="login-wrap login-glitch-enter">
         <div className="login-eyebrow">Hawkins Middle School · AV Club</div>
         <div className="st-title login-title-main">STRANGER<br />THINGS</div>
         <div className="login-subtitle">UI/UX Quiz Championship — Round I</div>
