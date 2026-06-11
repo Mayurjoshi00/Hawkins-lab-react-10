@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import ShatterTransition from './ShatterTransition';
 import TEAM_CREDENTIALS from '../data/teams';
 import './LoginScreen.css';
 
@@ -10,6 +11,10 @@ export default function LoginScreen({ onLogin }) {
   const [pass,    setPass]    = useState('');
   const [members, setMembers] = useState('');
   const [error,   setError]   = useState('');
+  const [shatter,  setShatter]  = useState(false);
+  const [sOrigin,  setSOrigin]  = useState({ x: 0, y: 0 });
+  const pendingData = useRef(null);
+  const btnRef = useRef(null);
   const [loading, setLoading] = useState(false);
 
   async function handleLogin() {
@@ -42,8 +47,7 @@ export default function LoginScreen({ onLogin }) {
 
       if (res.ok) {
         const data = await res.json();
-        setLoading(false);
-        onLogin({
+        const loginPayload = {
           teamId:        data.teamId,
           teamName:      data.teamName,
           members:       members,
@@ -54,7 +58,8 @@ export default function LoginScreen({ onLogin }) {
           totalSeconds:  data.totalSeconds   || 38 * 60,
           usedSeconds:   data.usedSeconds    || 0,
           serverMode:    true,
-        });
+        };
+        triggerShatter(loginPayload);
         return;
       }
 
@@ -82,12 +87,11 @@ export default function LoginScreen({ onLogin }) {
         return;
       }
 
-      setLoading(false);
-      onLogin({
+      triggerShatter({
         teamId:        cred.id,
         teamName:      cred.name,
         members,
-        sessionToken:  null,   // offline — no server token
+        sessionToken:  null,
         questionOrder: createQuestionOrder(),
         answers:       new Array(60).fill(null),
         flags:         new Array(60).fill(false),
@@ -101,7 +105,32 @@ export default function LoginScreen({ onLogin }) {
     setLoading(false);
   }
 
+  function triggerShatter(payload) {
+    pendingData.current = payload;
+    const btn = btnRef.current;
+    if (btn) {
+      const r = btn.getBoundingClientRect();
+      setSOrigin({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+    } else {
+      setSOrigin({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+    }
+    setLoading(false);
+    setShatter(true);
+  }
+
+  function handleShatterDone() {
+    setShatter(false);
+    onLogin(pendingData.current);
+  }
+
   return (
+    <>
+    <ShatterTransition
+      active={shatter}
+      originX={sOrigin.x}
+      originY={sOrigin.y}
+      onDone={handleShatterDone}
+    />
     <div className="login-screen screen tv-on">
       <div className="login-wrap login-glitch-enter">
         <div className="login-eyebrow">Hawkins Middle School · AV Club</div>
@@ -148,6 +177,7 @@ export default function LoginScreen({ onLogin }) {
           {error && <div className="input-err show">{error}</div>}
 
           <button
+            ref={btnRef}
             className="start-btn"
             onClick={handleLogin}
             disabled={loading}
@@ -162,6 +192,7 @@ export default function LoginScreen({ onLogin }) {
         </div>
       </div>
     </div>
+    </>
   );
 }
 
