@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import HomeScreen      from './components/HomeScreen';
 import LoginScreen     from './components/LoginScreen';
 import LandingScreen   from './components/LandingScreen';
@@ -58,47 +58,6 @@ function VineDecoration() {
   );
 }
 
-/* ── Portal overlay — used on login success ── */
-function PortalOverlay({ phase, onDone }) {
-  // phase: null | 'opening' | 'expanding'
-  const sparks = [
-    { x:  60, y: -80, d: 0.0 }, { x: -70, y: -60, d: 0.1 },
-    { x:  80, y:  40, d: 0.2 }, { x: -50, y:  70, d: 0.15 },
-    { x:  30, y:-100, d: 0.05 },{ x: -90, y: -20, d: 0.25 },
-    { x:  50, y:  90, d: 0.3 }, { x: -30, y:-110, d: 0.1 },
-  ];
-
-  useEffect(() => {
-    if (phase === 'expanding') {
-      const t = setTimeout(onDone, 800);
-      return () => clearTimeout(t);
-    }
-  }, [phase, onDone]);
-
-  if (!phase) return null;
-
-  return (
-    <div className={`portal-overlay ${phase}`}>
-      <div className="portal-ring-wrap">
-        <div className="portal-halo" />
-        <div className={`portal-ring ${phase === 'expanding' ? '' : ''}`}
-          style={phase === 'expanding' ? { animation: 'portalExpand 0.8s cubic-bezier(0.4,0,0.2,1) forwards' } : {}}>
-          <div className="portal-tendrils" />
-        </div>
-        {sparks.map((s, i) => (
-          <div key={i} className="portal-spark" style={{
-            top: '50%', left: '50%',
-            '--s-x': `${s.x}px`, '--s-y': `${s.y}px`,
-            '--s-dur': '1.2s', '--s-delay': `${s.d}s`,
-            background: i % 3 === 0 ? '#cc44ff' : i % 3 === 1 ? '#ff44aa' : '#4444ff',
-          }} />
-        ))}
-        <div className="portal-label">Gate is opening…</div>
-      </div>
-    </div>
-  );
-}
-
 /* ── Gate ripple — used on ENTER THE GATE click ── */
 function GateRipple({ active }) {
   if (!active) return null;
@@ -115,11 +74,7 @@ export default function App() {
   // Vecna tendril state — triggered by Enter The Lab
   const [tendrilActive, setTendrilActive] = useState(false);
   const [tendrilOrigin, setTendrilOrigin] = useState({ x: 0, y: 0 });
-
-  // Portal state
-  const [portalPhase,  setPortalPhase]  = useState(null); // null | 'opening' | 'expanding'
-  const [gateActive,   setGateActive]   = useState(false);
-  const [pendingLogin, setPendingLogin] = useState(null);
+  const [gateActive,    setGateActive]    = useState(false);
 
   const rcTimerRef = useRef(null);
 
@@ -200,20 +155,11 @@ export default function App() {
     setScreen('login');
   }
 
-  // ── Login: show portal, then transition ──
+  // ── Login: shatter transition completes, go to landing ──
   function handleLogin(data) {
-    setPendingLogin(data);
-    setPortalPhase('opening');
-    // After 1.8s show portal open, then expand
-    setTimeout(() => setPortalPhase('expanding'), 1800);
-  }
-
-  const handlePortalDone = useCallback(() => {
-    setPortalPhase(null);
-    setTeamData(pendingLogin);
-    setPendingLogin(null);
+    setTeamData(data);
     setScreen('landing');
-  }, [pendingLogin]);
+  }
 
   // ── Start quiz: gate ripple then transition ──
   function handleStart() {
@@ -274,9 +220,6 @@ export default function App() {
         originY={tendrilOrigin.y}
         onDone={handleTendrilDone}
       />
-
-      {/* Portal overlay — shown on login success */}
-      <PortalOverlay phase={portalPhase} onDone={handlePortalDone} />
 
       {/* Gate ripple — shown on ENTER THE GATE */}
       <GateRipple active={gateActive} />
