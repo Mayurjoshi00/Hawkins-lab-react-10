@@ -65,7 +65,7 @@ function drawTendrils(canvas, originX, originY, onDone) {
   });
 
   // Assign each segment a "birth time" based on distance from origin
-  const maxDist = Math.max(...allSegments.map(s =>
+  const maxDist = Math.max(1, ...allSegments.map(s =>
     Math.sqrt((s.x2 - originX) ** 2 + (s.y2 - originY) ** 2)
   ));
   allSegments.forEach(s => {
@@ -85,7 +85,8 @@ function drawTendrils(canvas, originX, originY, onDone) {
 
     // Dark radial background that grows with the tendrils
     const bgProg = Math.min(elapsed / (GROW_DURATION + HOLD_DURATION), 1);
-    const grad   = ctx.createRadialGradient(originX, originY, 0, originX, originY, maxLen * bgProg);
+    const gradR   = Math.max(1, maxLen * bgProg);
+    const grad   = ctx.createRadialGradient(originX, originY, 0, originX, originY, gradR);
     grad.addColorStop(0,    `rgba(4, 0, 8, ${0.92 * bgProg})`);
     grad.addColorStop(0.6,  `rgba(2, 0, 4, ${0.7  * bgProg})`);
     grad.addColorStop(1,    'rgba(0,0,0,0)');
