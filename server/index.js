@@ -1,10 +1,11 @@
-const express    = require('express');
-const path       = require('path');
-const http       = require('http');
-const WebSocket  = require('ws');
+const express     = require('express');
+const path        = require('path');
+const fs          = require('fs');
+const http        = require('http');
+const WebSocket   = require('ws');
 const compression = require('compression');
 const { v4: uuidv4 } = require('uuid');
-const cors       = require('cors');
+const cors        = require('cors');
 
 const app    = express();
 const server = http.createServer(app);
@@ -56,6 +57,76 @@ const teamState = new Map();
 
 // WebSocket clients: { ws, role, teamId }
 const wsClients = new Set();
+
+// ── File persistence (survives server restart / refresh) ─────────────────────
+const DATA_DIR  = path.join(__dirname, 'data');
+const DATA_FILE = path.join(DATA_DIR, 'team-state.json');
+let saveTimer   = null;
+
+function ensureDataDir() {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
+function loadState() {
+  ensureDataDir();
+  if (!fs.existsSync(DATA_FILE)) return;
+  try {
+    const parsed = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+    const teams  = parsed.teams || {};
+    for (const [id, state] of Object.entries(teams)) {
+      teamState.set(id, state);
+    }
+    console.log(`\x1b[32m💾 Loaded ${teamState.size} team session(s) from disk\x1b[0m`);
+  } catch (err) {
+    console.error('\x1b[33m⚠ Failed to load saved data:\x1b[0m', err.message);
+  }
+}
+
+function persistState() {
+  ensureDataDir();
+  try {
+    const payload = JSON.stringify({
+      savedAt: Date.now(),
+      teams:   Object.fromEntries(teamState),
+    }, null, 2);
+    const tmp = DATA_FILE + '.tmp';
+    fs.writeFileSync(tmp, payload, 'utf8');
+    fs.renameSync(tmp, DATA_FILE);
+  } catch (err) {
+    console.error('\x1b[33m⚠ Failed to save data:\x1b[0m', err.message);
+  }
+}
+
+function scheduleSave() {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    persistState();
+  }, 1000);
+}
+
+function clearPersistedState() {
+  teamState.clear();
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+  }
+  try {
+    if (fs.existsSync(DATA_FILE)) fs.unlinkSync(DATA_FILE);
+    console.log('\x1b[33m🗑 All team data cleared from disk\x1b[0m');
+  } catch (err) {
+    console.error('\x1b[33m⚠ Failed to delete saved data:\x1b[0m', err.message);
+  }
+}
+
+loadState();
+
+process.on('SIGTERM', () => {
+  if (saveTimer) { clearTimeout(saveTimer); persistState(); }
+});
+process.on('SIGINT', () => {
+  if (saveTimer) { clearTimeout(saveTimer); persistState(); }
+});
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function broadcast(data, filter) {
@@ -176,6 +247,8 @@ app.post('/api/team/login', (req, res) => {
     if (members) state.members = members;
   }
 
+  persistState();
+
   res.json({
     sessionToken,
     questionOrder: state.questionOrder,
@@ -207,6 +280,7 @@ app.post('/api/quiz/answer', (req, res) => {
   if (state.submitted) return res.status(400).json({ error: 'Already submitted' });
   if (qIndex >= 0 && qIndex < 60) state.answers[qIndex] = answer;
   state.lastActive = Date.now();
+  scheduleSave();
   res.json({ ok: true });
 });
 
@@ -216,6 +290,7 @@ app.post('/api/quiz/flag', (req, res) => {
   const { qIndex, flagged } = req.body;
   if (state.submitted) return res.status(400).json({ error: 'Already submitted' });
   if (qIndex >= 0 && qIndex < 60) state.flags[qIndex] = flagged;
+  scheduleSave();
   res.json({ ok: true });
 });
 
@@ -227,6 +302,7 @@ app.post('/api/quiz/heartbeat', (req, res) => {
     state.usedSeconds  = usedSeconds;
     state.totalSeconds = totalSeconds;
     state.lastActive   = Date.now();
+    scheduleSave();
   }
   res.json({ ok: true });
 });
@@ -243,6 +319,7 @@ app.post('/api/quiz/tabswitch', (req, res) => {
     count:     state.tabSwitchCount,
     timestamp: Date.now(),
   });
+  persistState();
   res.json({ ok: true, count: state.tabSwitchCount });
 });
 
@@ -278,6 +355,7 @@ app.post('/api/quiz/submit', (req, res) => {
   Object.assign(state, { correct, wrong, skip, pct, eC, mC, hC });
 
   broadcastToAdmins({ type: 'TEAM_SUBMITTED', team: getPublicState(state) });
+  persistState();
 
   res.json({ correct, wrong, skip, pct, eC, mC, hC, usedSeconds: state.usedSeconds });
 });
@@ -291,7 +369,7 @@ app.get('/api/admin/teams', (req, res) => {
 
 app.post('/api/admin/clear', (req, res) => {
   if (!authAdmin(req, res)) return;
-  teamState.clear();
+  clearPersistedState();
   broadcastToAdmins({ type: 'DATA_CLEARED' });
   res.json({ ok: true });
 });
@@ -335,7 +413,6 @@ app.get('/api/questions', (_req, res) => {
 
 // ── Serve React build in production ──────────────────────────────────────────
 const BUILD_DIR = path.join(__dirname, '..', 'build');
-const fs = require('fs');
 if (fs.existsSync(BUILD_DIR)) {
   app.use(express.static(BUILD_DIR));
   // All non-API routes serve index.html (React handles routing client-side)

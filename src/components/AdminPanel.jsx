@@ -487,7 +487,7 @@ export default function AdminPanel() {
         <div className="modal-overlay open">
           <div className="modal">
             <h3>⚠ PURGE ALL DATA?</h3>
-            <p>This will permanently delete all team sessions, answers, and results. The Upside Down cannot be undone.</p>
+            <p>This will permanently delete all team sessions, answers, results, and the saved data file. The Upside Down cannot be undone.</p>
             <div className="modal-btns">
               <button className="modal-cancel" onClick={() => setShowClear(false)}>Cancel</button>
               <button className="modal-confirm" onClick={clearAllData}>Purge Everything</button>

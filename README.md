@@ -50,6 +50,15 @@ After deploy, open your Render URL (e.g. `https://your-app.onrender.com`).
 
 ---
 
+## Data persistence
+
+Team sessions, answers, scores, and tab-switch counts are saved to `server/data/team-state.json` automatically. Data survives server restarts and admin page refreshes.
+
+- Teams that refresh mid-quiz can log in again with the same credentials to resume progress.
+- In the admin panel, **CLEAR DATA** deletes all saved sessions and removes the file.
+
+---
+
 ## Admin Panel
 - URL: `http://localhost:3000/chmod777`
 - Password: `chmod777`
