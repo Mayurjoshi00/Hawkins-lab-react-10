@@ -16,7 +16,9 @@ export default function AdminPanel() {
   const [tabAlerts,   setTabAlerts]   = useState([]);  // { teamId, teamName, count, timestamp }
   const [wsStatus,    setWsStatus]    = useState('LIVE');
   const [showClear,   setShowClear]   = useState(false);
+  const [backupName,  setBackupName]  = useState('');
   const [spinning,    setSpinning]    = useState(false);
+  const [clearing,    setClearing]    = useState(false);
 
   const wsRef        = useRef(null);
   const toastRef     = useRef(null);
@@ -168,14 +170,47 @@ export default function AdminPanel() {
     setTimeout(() => setSpinning(false), 600);
   }
 
+  function openClearModal() {
+    setBackupName(defaultBackupFilename());
+    setShowClear(true);
+  }
+
+  function exportTeamsCsv(nameInput) {
+    if (!teams.length) return null;
+    const filename = resolveBackupFilename(nameInput);
+    downloadCsv(buildTeamsCsv(teams), filename);
+    return filename;
+  }
+
+  function downloadTeamsCsv() {
+    const name = window.prompt(
+      'Backup file name (edit or keep the default):',
+      defaultBackupFilename()
+    );
+    if (name === null) return;
+    exportTeamsCsv(name);
+  }
+
   async function clearAllData() {
-    await fetch('/api/admin/clear', {
-      method: 'POST',
-      headers: { 'x-admin-token': adminToken },
-    });
-    setShowClear(false);
-    setTabAlerts([]);
-    renderDashboard(adminToken);
+    if (clearing) return;
+    setClearing(true);
+    try {
+      const filename = teams.length ? exportTeamsCsv(backupName) : null;
+      await fetch('/api/admin/clear', {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'x-admin-token': adminToken,
+        },
+        body: JSON.stringify({ backupName: filename || backupName }),
+      });
+      setShowClear(false);
+      setBackupName('');
+      setTabAlerts([]);
+      renderDashboard(adminToken);
+    } finally {
+      setClearing(false);
+    }
   }
 
   // ── Dismiss alert ──
@@ -295,7 +330,10 @@ export default function AdminPanel() {
             </svg>
             REFRESH
           </button>
-          <button className="action-btn danger" onClick={() => setShowClear(true)}>⬡ CLEAR DATA</button>
+          <button className="action-btn" onClick={downloadTeamsCsv} disabled={teams.length === 0}>
+            ↓ DOWNLOAD CSV
+          </button>
+          <button className="action-btn danger" onClick={openClearModal}>⬡ CLEAR DATA</button>
           <button className="action-btn logout-btn" onClick={adminLogout}>LOGOUT</button>
         </div>
       </div>
@@ -485,16 +523,117 @@ export default function AdminPanel() {
       {/* ── Clear Modal ── */}
       {showClear && (
         <div className="modal-overlay open">
-          <div className="modal">
+          <div className="modal modal-wide">
             <h3>⚠ PURGE ALL DATA?</h3>
-            <p>This will permanently delete all team sessions, answers, results, and the saved data file. The Upside Down cannot be undone.</p>
+            <p>
+              A CSV backup will download automatically before deletion.
+              You can also save a JSON copy on the server. This cannot be undone.
+            </p>
+            <div className="input-group modal-input-group">
+              <label>Backup file name <span className="optional-tag">(optional)</span></label>
+              <input
+                type="text"
+                value={backupName}
+                onChange={e => setBackupName(e.target.value)}
+                placeholder="hawkins-backup-YYYY-MM-DD_HH-mm-ss"
+                autoComplete="off"
+                onKeyDown={e => e.key === 'Enter' && clearAllData()}
+              />
+            </div>
             <div className="modal-btns">
+              <button
+                className="modal-download"
+                onClick={() => exportTeamsCsv(backupName)}
+                disabled={teams.length === 0}
+              >
+                ↓ Download CSV
+              </button>
               <button className="modal-cancel" onClick={() => setShowClear(false)}>Cancel</button>
-              <button className="modal-confirm" onClick={clearAllData}>Purge Everything</button>
+              <button className="modal-confirm" onClick={clearAllData} disabled={clearing}>
+                {clearing ? 'Purging…' : 'Purge Everything'}
+              </button>
             </div>
           </div>
         </div>
       )}
     </div>
   );
+}
+
+// ── CSV export helpers ────────────────────────────────────────────────────────
+function defaultBackupFilename() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return `hawkins-backup-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}`;
+}
+
+function resolveBackupFilename(name) {
+  const trimmed = (name || '').trim();
+  if (!trimmed) return defaultBackupFilename();
+  const safe = trimmed.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
+  return safe || defaultBackupFilename();
+}
+
+function csvCell(value) {
+  const s = String(value ?? '');
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function calcMarksExport(pct) {
+  return Math.round(pct * 0.5 * 10) / 10;
+}
+
+function buildTeamsCsv(teams) {
+  const sorted = [...teams].sort((a, b) => {
+    if (a.submitted && b.submitted) return b.pct - a.pct;
+    if (a.submitted) return -1;
+    if (b.submitted) return 1;
+    return (a.name || '').localeCompare(b.name || '');
+  });
+
+  const headers = [
+    'Rank', 'Team ID', 'Team Name', 'Members', 'Score (%)', 'Marks',
+    'Correct', 'Wrong', 'Skipped', 'Easy', 'Medium', 'Advanced',
+    'Time Used', 'Tab Switches', 'Status',
+  ];
+
+  let rank = 0;
+  const rows = sorted.map(t => {
+    if (t.submitted) rank++;
+    const timeUsed = t.submitted
+      ? `${Math.floor((t.usedSeconds || 0) / 60)}m ${(t.usedSeconds || 0) % 60}s`
+      : '';
+    return [
+      t.submitted ? rank : '',
+      t.id,
+      t.name || t.id,
+      t.members || '',
+      t.submitted ? t.pct : '',
+      t.submitted ? calcMarksExport(t.pct) : '',
+      t.submitted ? t.correct : '',
+      t.submitted ? t.wrong : '',
+      t.submitted ? t.skip : '',
+      t.submitted ? `${t.eC}/15` : '',
+      t.submitted ? `${t.mC}/30` : '',
+      t.submitted ? `${t.hC}/15` : '',
+      timeUsed,
+      t.tabSwitchCount || 0,
+      t.submitted ? 'Submitted' : 'In Progress',
+    ];
+  });
+
+  return [headers, ...rows].map(row => row.map(csvCell).join(',')).join('\n');
+}
+
+function downloadCsv(csv, filename) {
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `${filename}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }

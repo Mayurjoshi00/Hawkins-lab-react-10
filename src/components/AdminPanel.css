@@ -565,7 +565,30 @@
 .modal h3 { font-family: var(--font-display); font-size: 22px; letter-spacing: .12em; margin-bottom: 10px; color: var(--white); }
 .modal p  { color: var(--text-dim); font-size: 14px; line-height: 1.7; margin-bottom: 28px; }
 
-.modal-btns { display: flex; gap: 12px; justify-content: center; }
+.modal-wide { max-width: 520px; }
+
+.modal-input-group { margin-bottom: 20px; text-align: left; }
+
+.modal-btns { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+
+.modal-download {
+  padding: 10px 18px;
+  background: transparent;
+  border: 1px solid rgba(100, 180, 255, 0.4);
+  color: #88ccff;
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: .12em;
+  cursor: pointer;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+.modal-download:hover:not(:disabled) {
+  border-color: #88ccff;
+  box-shadow: 0 0 16px rgba(80, 160, 255, 0.25);
+}
+
+.modal-download:disabled { opacity: .4; cursor: not-allowed; }
 
 .modal-cancel {
   background: rgba(30,15,15,.8);

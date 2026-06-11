@@ -55,7 +55,8 @@ After deploy, open your Render URL (e.g. `https://your-app.onrender.com`).
 Team sessions, answers, scores, and tab-switch counts are saved to `server/data/team-state.json` automatically. Data survives server restarts and admin page refreshes.
 
 - Teams that refresh mid-quiz can log in again with the same credentials to resume progress.
-- In the admin panel, **CLEAR DATA** deletes all saved sessions and removes the file.
+- In the admin panel, **DOWNLOAD CSV** exports the leaderboard anytime.
+- **CLEAR DATA** downloads a CSV backup automatically (optional file name), saves a JSON backup on the server (`server/data/backups/`), then deletes live data.
 
 ---
 

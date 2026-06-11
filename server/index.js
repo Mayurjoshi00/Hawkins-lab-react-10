@@ -105,6 +105,33 @@ function scheduleSave() {
   }, 1000);
 }
 
+function defaultBackupName() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return `hawkins-backup-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}`;
+}
+
+function sanitizeBackupName(name) {
+  const trimmed = (name || '').trim();
+  if (!trimmed) return defaultBackupName();
+  const safe = trimmed.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
+  return safe || defaultBackupName();
+}
+
+function backupStateToFile(name) {
+  if (teamState.size === 0) return null;
+  const BACKUPS_DIR = path.join(DATA_DIR, 'backups');
+  if (!fs.existsSync(BACKUPS_DIR)) fs.mkdirSync(BACKUPS_DIR, { recursive: true });
+  const safeName = sanitizeBackupName(name);
+  const file     = path.join(BACKUPS_DIR, `${safeName}.json`);
+  fs.writeFileSync(file, JSON.stringify({
+    backedUpAt: Date.now(),
+    teams:      Object.fromEntries(teamState),
+  }, null, 2), 'utf8');
+  console.log(`\x1b[32m💾 Backup saved: ${file}\x1b[0m`);
+  return safeName;
+}
+
 function clearPersistedState() {
   teamState.clear();
   if (saveTimer) {
@@ -369,9 +396,10 @@ app.get('/api/admin/teams', (req, res) => {
 
 app.post('/api/admin/clear', (req, res) => {
   if (!authAdmin(req, res)) return;
+  const backupName = backupStateToFile(req.body?.backupName);
   clearPersistedState();
   broadcastToAdmins({ type: 'DATA_CLEARED' });
-  res.json({ ok: true });
+  res.json({ ok: true, backupName });
 });
 
 // ── WebSocket ─────────────────────────────────────────────────────────────────
