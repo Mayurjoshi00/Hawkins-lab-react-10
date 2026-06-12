@@ -482,7 +482,7 @@ export default function AdminPanel() {
                         )}
                       </td>
                       <td className="stat-cell" style={{ color:'#bb55ee' }}>
-                        {t.submitted ? calcMarks(t.pct) : '—'}
+                        {t.submitted ? calcMarks(t.correct) : '—'}
                       </td>
                       <td className="stat-cell" style={{ color:'var(--red)' }}>{t.submitted ? t.correct : '—'}</td>
                       <td className="stat-cell" style={{ color:'#ff6060' }}>{t.submitted ? t.wrong   : '—'}</td>
